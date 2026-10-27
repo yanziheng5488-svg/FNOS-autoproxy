@@ -1,0 +1,16 @@
+appname="AutoProxy"
+version="1.2.0"
+display_name="达芬奇自动代理"
+desc="面向 DaVinci Resolve 剪辑工作流的 NAS 自动代理转码服务：监控素材目录，新增视频自动转低清代理（支持 DNxHR LB / ProRes Proxy / H.264 / H.265，可选 VAAPI/NVENC 硬件加速），保留文件名与时间码，代理输出到 Proxy 子目录，达芬奇可自动重链原片。支持多目录监控、Web 管理界面、值守防闪退。联系作者：微信 15366902445"
+maintainer="15366902445（微信）"
+maintainer_url=""
+source="thirdparty"
+platform="all"
+micro_app=true
+os_min_version="1.0.0"
+checkport=false
+changelog="1.2.0：接入飞牛统一网关（登录态鉴权、不监听公网端口）；支持点击按钮唤起飞牛文件管理器选择监控目录；新增路径安全校验防穿越；全新达芬奇风格图标与名称。"
+desktop_uidir="ui"
+desktop_applaunchname="AutoProxy.main"
+ctl_stop=true
+disable_authorization_path=false

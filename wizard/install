@@ -1,0 +1,91 @@
+[
+  {
+    "stepTitle": "自动代理 · 基础设置",
+    "items": [
+      {
+        "type": "tips",
+        "helpText": "安装完成后，请到「应用中心 → 自动代理 → 应用设置 → 授权目录」添加素材文件夹（用飞牛自带的文件管理器选择，可加多个）。应用会自动监控这些已授权目录，并在其中生成 Proxy 代理子文件夹。本应用会自动检测 ffmpeg（fnOS 系统通常已内置），无需手动安装或打开命令行。"
+      },
+      {
+        "type": "select",
+        "field": "wizard_codec",
+        "label": "代理编码格式",
+        "initValue": "dnxhr_lb",
+        "options": [
+          {
+            "label": "DNxHR LB（推荐 · Windows + 达芬奇）",
+            "value": "dnxhr_lb"
+          },
+          {
+            "label": "H.264（体积小 · 兼容最广）",
+            "value": "h264"
+          },
+          {
+            "label": "H.265（体积更小）",
+            "value": "h265"
+          },
+          {
+            "label": "ProRes Proxy（苹果 / Mac）",
+            "value": "prores_proxy"
+          }
+        ]
+      },
+      {
+        "type": "select",
+        "field": "wizard_resolution",
+        "label": "代理分辨率",
+        "initValue": "1080p",
+        "options": [
+          {
+            "label": "1080p",
+            "value": "1080p"
+          },
+          {
+            "label": "720p",
+            "value": "720p"
+          },
+          {
+            "label": "原片一半（Half）",
+            "value": "half"
+          },
+          {
+            "label": "保持原分辨率",
+            "value": "original"
+          }
+        ]
+      },
+      {
+        "type": "select",
+        "field": "wizard_hwaccel",
+        "label": "GPU 硬件加速",
+        "initValue": "auto",
+        "options": [
+          {
+            "label": "自动（可用则用，推荐）",
+            "value": "auto"
+          },
+          {
+            "label": "关闭（纯 CPU）",
+            "value": "off"
+          }
+        ]
+      },
+      {
+        "type": "select",
+        "field": "wizard_auto_install_ffmpeg",
+        "label": "缺少 ffmpeg 时自动安装",
+        "initValue": "true",
+        "options": [
+          {
+            "label": "是（自动补齐，推荐）",
+            "value": "true"
+          },
+          {
+            "label": "否（仅提示）",
+            "value": "false"
+          }
+        ]
+      }
+    ]
+  }
+]

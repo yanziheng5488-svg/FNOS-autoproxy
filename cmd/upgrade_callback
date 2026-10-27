@@ -1,0 +1,5 @@
+#!/bin/bash
+# 升级后：确保配置目录与运行时数据目录存在
+mkdir -p "$TRIM_PKGETC" "$TRIM_PKGVAR"
+[ -f "$TRIM_PKGETC/config.json" ] || python3 "$TRIM_APPDEST/bin/write_config.py" "$TRIM_PKGETC/config.json"
+exit 0

@@ -1,0 +1,7 @@
+#!/bin/bash
+# 安装前检查：python3 为运行必需；ffmpeg 会在安装/配置阶段自动检测并兜底安装，此处不阻断
+if ! command -v python3 >/dev/null 2>&1; then
+  echo "缺少 python3，应用无法运行。" > "$TRIM_TEMP_LOGFILE" 2>/dev/null
+  exit 1
+fi
+exit 0

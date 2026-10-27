@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>达芬奇自动代理</title>
+<style>
+  :root {
+    --bg: #f5f7fb; --card: #ffffff; --border: #e5e9f2; --text: #1f2937; --muted: #6b7280;
+    --accent: #2563eb; --accent-soft: #eaf1ff;
+    --ok: #16a34a; --ok-soft: #e8f7ee;
+    --warn: #d97706; --warn-soft: #fdf3e3;
+    --err: #dc2626; --err-soft: #fdecec;
+    --run: #0ea5e9; --run-soft: #e6f6fd;
+    --radius: 12px; --shadow: 0 1px 3px rgba(16,24,40,.06), 0 1px 2px rgba(16,24,40,.04);
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+    font-family: system-ui, -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    font-size: 14px; line-height: 1.6; }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 24px 20px 60px; }
+  header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+  .brand { display: flex; align-items: center; gap: 12px; }
+  .logo { width: 40px; height: 40px; border-radius: 10px;
+    background: linear-gradient(135deg, #2563eb, #0ea5e9); display: grid; place-items: center;
+    color: #fff; font-weight: 700; font-size: 18px; }
+  h1 { font-size: 20px; margin: 0; }
+  .sub { color: var(--muted); font-size: 12px; }
+  .pill { padding: 4px 12px; border-radius: 999px; font-size: 12px; font-weight: 600; }
+  .grid { display: grid; gap: 16px; }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+    box-shadow: var(--shadow); padding: 18px; }
+  .card h2 { font-size: 14px; margin: 0 0 14px; }
+  .kv { display: grid; grid-template-columns: 120px 1fr; row-gap: 10px; align-items: baseline; }
+  .kv dt { color: var(--muted); font-size: 13px; }
+  .kv dd { margin: 0; font-family: ui-monospace, Consolas, monospace; word-break: break-all; }
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+  .stat { text-align: center; padding: 16px 8px; border-radius: 10px; border: 1px solid var(--border); }
+  .stat .num { font-size: 26px; font-weight: 700; }
+  .stat .lbl { color: var(--muted); font-size: 12px; margin-top: 2px; }
+  .stat.pending .num { color: var(--warn); } .stat.processing .num { color: var(--run); }
+  .stat.done .num { color: var(--ok); } .stat.failed .num { color: var(--err); }
+  .actions { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; }
+  button { border: 1px solid var(--border); background: var(--card); color: var(--text);
+    padding: 8px 14px; border-radius: 8px; cursor: pointer; font-size: 13px; font-family: inherit; }
+  button:hover { border-color: var(--accent); color: var(--accent); }
+  button.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+  button.primary:hover { opacity: .9; }
+  button.danger:hover { border-color: var(--err); color: var(--err); }
+  button:disabled { opacity: .5; cursor: not-allowed; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--border); font-size: 13px; }
+  th { color: var(--muted); font-weight: 600; font-size: 12px; }
+  td.src { font-family: ui-monospace, Consolas, monospace; font-size: 12px; word-break: break-all; max-width: 340px; }
+  .badge { padding: 2px 9px; border-radius: 999px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+  .badge.pending { background: var(--warn-soft); color: var(--warn); }
+  .badge.processing { background: var(--run-soft); color: var(--run); }
+  .badge.done { background: var(--ok-soft); color: var(--ok); }
+  .badge.failed { background: var(--err-soft); color: var(--err); }
+  .badge.ok { background: var(--ok-soft); color: var(--ok); }
+  .badge.err { background: var(--err-soft); color: var(--err); }
+  .badge.warn { background: var(--warn-soft); color: var(--warn); }
+  .badge.auth { background: var(--accent-soft); color: var(--accent); }
+  .log { background: #0f172a; color: #d1e7ff; border-radius: 10px; padding: 14px;
+    font-family: ui-monospace, Consolas, monospace; font-size: 12px; max-height: 240px;
+    overflow: auto; white-space: pre-wrap; word-break: break-all; }
+  .empty { color: var(--muted); text-align: center; padding: 20px 0; }
+  .banner { padding: 10px 14px; border-radius: 10px; margin-bottom: 16px; font-size: 13px; }
+  .banner.err { background: var(--err-soft); color: var(--err); }
+  .banner.warn { background: var(--warn-soft); color: var(--warn); }
+  .row { display: flex; gap: 16px; } .col { flex: 1; min-width: 0; }
+  .dir-item { display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    padding: 9px 12px; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 8px; }
+  .dir-item .path { font-family: ui-monospace, Consolas, monospace; font-size: 12px; word-break: break-all; }
+  .add-row { display: flex; gap: 10px; margin-top: 12px; }
+  .add-row input { flex: 1; padding: 8px 12px; border: 1px solid var(--border); border-radius: 8px;
+    font-family: ui-monospace, Consolas, monospace; font-size: 13px; }
+  .toast { position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%);
+    padding: 10px 18px; border-radius: 10px; font-size: 13px; font-weight: 600;
+    opacity: 0; transition: opacity .25s; pointer-events: none; z-index: 99;
+    box-shadow: 0 4px 12px rgba(16,24,40,.15); max-width: 80vw; }
+  .toast.ok { background: #113d24; color: #6ee7a0; opacity: 1; }
+  .toast.err { background: #431418; color: #fca5a5; opacity: 1; }
+  @media (max-width: 720px) { .row { flex-direction: column; } .stats { grid-template-columns: repeat(2, 1fr); } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand">
+      <div class="logo">P</div>
+      <div>
+        <h1>达芬奇自动代理 <span class="pill" id="statusPill">加载中…</span></h1>
+        <div class="sub">监控多个目录 · 自动生成低清代理 · 供 DaVinci Resolve 剪辑</div>
+      </div>
+    </div>
+  </header>
+
+  <div id="banners"></div>
+
+  <div class="stats">
+    <div class="stat pending"><div class="num" id="nPending">0</div><div class="lbl">待处理</div></div>
+    <div class="stat processing"><div class="num" id="nProcessing">0</div><div class="lbl">转码中</div></div>
+    <div class="stat done"><div class="num" id="nDone">0</div><div class="lbl">已完成</div></div>
+    <div class="stat failed"><div class="num" id="nFailed">0</div><div class="lbl">失败</div></div>
+  </div>
+
+  <div class="row" style="margin-top:16px">
+    <div class="col card">
+      <h2>转码设置</h2>
+      <dl class="kv">
+        <dt>编码格式</dt><dd id="cCodec">—</dd>
+        <dt>代理分辨率</dt><dd id="cRes">—</dd>
+        <dt>GPU 加速</dt><dd id="cHw">—</dd>
+        <dt>ffmpeg</dt><dd id="cFfmpeg">—</dd>
+      </dl>
+    </div>
+    <div class="col card">
+      <h2>操作</h2>
+      <div class="actions">
+        <button class="primary" id="btnRescan">立即扫描</button>
+        <button id="btnRetry">重试失败</button>
+        <button id="btnClearDone">清空已完成</button>
+        <button id="btnClearFailed">清空失败</button>
+      </div>
+      <p class="sub">新增文件落盘稳定后自动入队；代理写入各监控目录下的 <b>Proxy</b> 子文件夹。</p>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:16px">
+    <h2>监控目录</h2>
+    <div class="actions" style="margin-bottom:10px">
+      <button class="primary" id="btnPickDir">用文件管理器选择目录</button>
+    </div>
+    <p class="sub">点击上面的按钮会调起飞牛自带的文件管理器，直接选素材文件夹（可多选）。下方输入框用于手动补充目录（可选）。</p>
+    <div id="dirList"><div class="empty">加载中…</div></div>
+    <div class="add-row">
+      <input id="newDir" placeholder="手动补充：输入目录绝对路径，例如 /vol1/1000/视频/素材（可选）" />
+      <button class="primary" id="btnAddDir">添加目录</button>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:16px">
+    <h2>任务队列</h2>
+    <div id="jobTable"><div class="empty">加载中…</div></div>
+  </div>
+
+  <div class="card" style="margin-top:16px">
+    <h2>运行日志</h2>
+    <div class="log" id="logBox">加载中…</div>
+  </div>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script>
+// 计算统一网关前缀：页面 URL 形如 /app/autoproxy/ 或 /（直连），据此拼 API 与静态资源路径
+const BASE = (location.pathname.endsWith('/') ? location.pathname : location.pathname + '/');
+window.BASE = BASE;
+const $ = id => document.getElementById(id);
+let failedIds = [];
+let toastTimer = null;
+
+function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+function toast(msg, ok) {
+  const t = $('toast');
+  t.textContent = msg;
+  t.className = 'toast ' + (ok ? 'ok' : 'err');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { t.className = 'toast'; }, 3200);
+}
+
+async function refresh() {
+  try { render(await (await fetch(BASE + 'api/status')).json()); }
+  catch (e) { $('statusPill').textContent = '连接失败'; }
+}
+
+function hwBadge(d) {
+  const hw = d.hw || {}, accel = (d.config || {}).hwaccel;
+  if (hw.active === 'vaapi') return '<span class="badge ok">VAAPI 硬件加速中</span>';
+  if (hw.active === 'nvenc') return '<span class="badge ok">NVENC 硬件加速中</span>';
+  if (accel === 'off') return '<span class="badge warn">已关闭（纯 CPU）</span>';
+  if (!hw.codec_hw_capable) return '<span class="badge warn">该编码仅 CPU（DNxHR/ProRes 无硬编）</span>';
+  if (!hw.vaapi && !hw.nvidia) return '<span class="badge warn">未检测到 GPU，用 CPU</span>';
+  return '<span class="badge warn">CPU</span>';
+}
+
+function render(d) {
+  const c = d.config, s = d.stats, rt = d.runtime;
+  $('nPending').textContent = s.pending; $('nProcessing').textContent = s.processing;
+  $('nDone').textContent = s.done; $('nFailed').textContent = s.failed;
+
+  const dirBad = d.dirs.some(x => !x.readable);
+  const ok = rt.ffmpeg_ok && d.dirs.length > 0 && !dirBad;
+  const pill = $('statusPill');
+  pill.textContent = ok ? '运行正常' : '需要处理';
+  pill.style.background = ok ? 'var(--ok-soft)' : 'var(--warn-soft)';
+  pill.style.color = ok ? 'var(--ok)' : 'var(--warn)';
+
+  $('cCodec').textContent = c.codec;
+  $('cRes').textContent = c.resolution;
+  $('cHw').innerHTML = hwBadge(d) + ' <span class="sub">(VAAPI:' + (d.hw.vaapi?'有':'无') + ' · NVIDIA:' + (d.hw.nvidia?'有':'无') + ')</span>';
+  $('cFfmpeg').textContent = rt.ffmpeg_ok ? (rt.ffmpeg || '已找到') : '未找到';
+
+  const banners = [];
+  const authCount = (d.authorized_dirs || []).length;
+  if (!rt.ffmpeg_ok) banners.push({t:'err', m:'未检测到 ffmpeg，转码将失败。fnOS 通常已内置；若缺失请到「应用设置」重新保存一次配置自动补齐。'});
+  if (d.dirs.length === 0) banners.push({t:'warn', m:'尚未配置监控目录。点击上方「用文件管理器选择目录」选择素材文件夹即可。'});
+  else if (authCount === 0) banners.push({t:'warn', m:'当前目录为手动添加。建议用「文件管理器选择目录」，选目录更直观、权限由飞牛统一管理。'});
+  d.dirs.forEach(x => { if (!x.exists) banners.push({t:'err', m:'目录不存在：' + x.path}); else if (!x.readable) banners.push({t:'warn', m:'目录无读取权限：' + x.path}); });
+  if (authCount > 0) banners.push({t:'warn', m:'新增授权目录后，请在应用中心重启一次应用使其生效（授权目录在应用启动时读取）。'});
+  $('banners').innerHTML = banners.map(b => `<div class="banner ${b.t}">${esc(b.m)}</div>`).join('');
+
+  if (!d.dirs.length) {
+    $('dirList').innerHTML = '<div class="empty">暂无监控目录 — 点上方按钮用飞牛文件管理器选择</div>';
+  } else {
+    $('dirList').innerHTML = d.dirs.map(x => {
+      const isAuth = x.source === 'authorized';
+      const badge = x.readable
+        ? '<span class="badge ok">可访问</span>'
+        : (x.exists ? '<span class="badge err">无权限</span>' : '<span class="badge err">不存在</span>');
+      const srcBadge = isAuth ? '<span class="badge auth">飞牛授权</span>' : '<span class="badge warn">手动</span>';
+      const tail = isAuth
+        ? '<span class="sub">在「应用设置 → 授权目录」管理</span>'
+        : `<button class="danger" data-path="${esc(x.path)}">删除</button>`;
+      return `<div class="dir-item">
+        <span class="path">${esc(x.path)}</span>
+        <span style="display:flex;gap:8px;align-items:center">${srcBadge}${badge}${tail}</span>
+      </div>`;
+    }).join('');
+    document.querySelectorAll('#dirList button[data-path]').forEach(b => {
+      b.onclick = () => post('/api/dirs/remove?path=' + encodeURIComponent(b.dataset.path));
+    });
+  }
+
+  failedIds = d.jobs.filter(j => j.status === 'failed').map(j => j.id);
+  if (!d.jobs.length) {
+    $('jobTable').innerHTML = '<div class="empty">暂无任务</div>';
+  } else {
+    $('jobTable').innerHTML = `<table><thead><tr><th>源文件</th><th>状态</th><th>代理输出</th><th>错误信息</th></tr></thead><tbody>` +
+      d.jobs.map(j => `<tr>
+        <td class="src" title="${esc(j.src)}">${esc(j.src)}</td>
+        <td><span class="badge ${j.status}">${({pending:'待处理',processing:'转码中',done:'已完成',failed:'失败'})[j.status]||j.status}</span></td>
+        <td class="src" title="${esc(j.dst||'')}">${esc(j.dst ? j.dst : '—')}</td>
+        ${j.error ? `<td class="src" title="${esc(j.error)}">${esc(j.error.slice(0,60))}</td>` : '<td></td>'}
+      </tr>`).join('') + `</tbody></table>`;
+  }
+}
+
+async function post(path) {
+  try {
+    const r = await fetch(BASE + String(path).replace(/^\//, ''), {method:'POST'});
+    const d = await r.json().catch(() => ({}));
+    if (d && typeof d.ok === 'boolean') toast(d.message || (d.ok ? '操作成功' : '操作失败'), d.ok);
+    setTimeout(refresh, 400);
+  } catch (e) { toast('请求失败：' + e, false); }
+}
+
+$('btnRescan').onclick = () => post('/api/rescan');
+$('btnRetry').onclick = () => { failedIds.forEach(id => post('/api/retry?id='+id)); };
+$('btnClearDone').onclick = () => post('/api/clear?scope=done');
+$('btnClearFailed').onclick = () => post('/api/clear?scope=failed');
+$('btnAddDir').onclick = async () => {
+  const v = $('newDir').value.trim();
+  if (!v) { toast('请先输入目录路径', false); return; }
+  try {
+    const r = await fetch(BASE + 'api/dirs/add?path=' + encodeURIComponent(v), {method:'POST'});
+    const d = await r.json().catch(() => ({}));
+    if (d.ok) $('newDir').value = '';
+    toast(d.message || (d.ok ? '已添加' : '添加失败'), !!d.ok);
+    setTimeout(refresh, 400);
+  } catch (e) { toast('请求失败：' + e, false); }
+};
+$('newDir').addEventListener('keydown', e => { if (e.key === 'Enter') $('btnAddDir').click(); });
+
+window.__toast = toast;
+window.__refresh = refresh;
+
+$('btnPickDir').onclick = () => {
+  if (window.addDirViaPicker) window.addDirViaPicker();
+  else toast('文件选择器组件未加载，请刷新页面或改用下方手动输入', false);
+};
+
+async function refreshLog() {
+  try {
+    const d = await (await fetch(BASE + 'api/log')).json();
+    $('logBox').textContent = d.log.join('\n') || '（暂无日志）';
+    $('logBox').scrollTop = $('logBox').scrollHeight;
+  } catch (e) {}
+}
+
+refresh(); refreshLog();
+setInterval(refresh, 3000);
+setInterval(refreshLog, 5000);
+</script>
+
+<script type="module">
+const BASE = window.BASE || (location.pathname.endsWith('/') ? location.pathname : location.pathname + '/');
+let sdk = null, sdkError = null;
+try {
+  const mod = await import(BASE + 'trim-sdk.js');
+  const TrimApp = mod.TrimApp || mod.default;
+  sdk = new TrimApp();
+} catch (e) { sdkError = e; }
+
+window.addDirViaPicker = async function () {
+  if (!sdk) {
+    window.__toast && window.__toast('文件选择器组件初始化失败：' + (sdkError && sdkError.message ? sdkError.message : '未知'), false);
+    return;
+  }
+  if (sdk.isStandaloneWeb) {
+    window.__toast && window.__toast('请在飞牛桌面或 App 内打开应用以使用文件选择器', false);
+    return;
+  }
+  try {
+    const pick = sdk.pickUserFile({ directory: true, multiple: true, title: '选择素材目录', okText: '选择' });
+    const timeout = new Promise((_, rej) => setTimeout(() => rej(new Error('TIMEOUT')), 15000));
+    const result = await Promise.race([pick, timeout]);
+    if (!result) { window.__toast && window.__toast('未选择目录', false); return; }
+    if (result.code !== 0) { window.__toast && window.__toast('选择失败：' + (result.msg || '未知错误'), false); return; }
+    const paths = (result.data || []).filter(Boolean);
+    if (!paths.length) { window.__toast && window.__toast('未选择目录', false); return; }
+    let added = 0, dup = 0;
+    for (const p of paths) {
+      const r = await fetch(BASE + 'api/dirs/add?path=' + encodeURIComponent(p), {method:'POST'}).then(x => x.json()).catch(() => ({}));
+      if (r && r.ok) added++; else if (r && /已存在/.test(r.message || '')) dup++;
+    }
+    let m = '已添加 ' + added + ' 个目录';
+    if (dup) m += '，' + dup + ' 个已存在';
+    window.__toast && window.__toast(m, added > 0);
+    setTimeout(() => window.__refresh && window.__refresh(), 400);
+  } catch (e) {
+    const msg = (e && e.message === 'TIMEOUT')
+      ? '文件选择器未响应：应用可能未以微应用模式加载。请确认已升级到 1.1.0，然后完全关闭并重新打开应用再试。'
+      : ('文件管理器调用失败：' + (e && e.message ? e.message : e));
+    window.__toast && window.__toast(msg, false);
+  }
+};
+</script>
+</body>
+</html>

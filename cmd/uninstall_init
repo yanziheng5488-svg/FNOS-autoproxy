@@ -1,0 +1,5 @@
+#!/bin/bash
+# 卸载前：停止转码服务与值守循环（[c] 避免 pkill 匹配自身）
+pkill -f "autoproxy.py --config" 2>/dev/null
+pkill -f "[c]md/main start" 2>/dev/null
+exit 0

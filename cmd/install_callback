@@ -1,0 +1,12 @@
+#!/bin/bash
+# 安装后：生成 config.json + ffmpeg 自检/自动兜底安装
+python3 "$TRIM_APPDEST/bin/write_config.py" "$TRIM_PKGETC/config.json" || {
+  echo "写入配置失败" > "$TRIM_TEMP_LOGFILE" 2>/dev/null
+  exit 1
+}
+mkdir -p "$TRIM_PKGVAR"
+sh "$TRIM_APPDEST/bin/ensure_ffmpeg.sh"
+
+# 延迟自愈统一网关路由（飞牛手动安装不解析 gateway 字段，安装后补回）
+( sleep 8; sh "${0%/*}/fix_gateway.sh" ) >/dev/null 2>&1 &
+exit 0

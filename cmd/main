@@ -1,0 +1,69 @@
+#!/bin/bash
+# AutoProxy 生命周期主脚本：start / stop / status
+# start 会启动一个值守循环（watchdog）：主程序闪退后自动重启，stop 可优雅停止。
+
+APPBIN="$TRIM_APPDEST/src/autoproxy.py"
+CONFIG="$TRIM_PKGETC/config.json"
+VARDIR="$TRIM_PKGVAR"
+WEB="$TRIM_APPDEST/web/index.html"
+PATTERN="autoproxy.py --config"
+WATCHDOG_PIDFILE="$VARDIR/watchdog.pid"
+STOP_FLAG="$VARDIR/stop.flag"
+
+is_running() {
+  pgrep -f "$PATTERN" > /dev/null 2>&1
+}
+
+launch_app() {
+  SOCK="$TRIM_APPDEST/autoproxy.sock"
+  if [ "$(id -u)" = "0" ] && [ -n "${TRIM_USERNAME:-}" ]; then
+    exec runuser -u "$TRIM_USERNAME" -- python3 "$APPBIN" --config "$CONFIG" --var "$VARDIR" --web "$WEB" --socket "$SOCK" >> "$VARDIR/autoproxy.log" 2>&1
+  else
+    exec python3 "$APPBIN" --config "$CONFIG" --var "$VARDIR" --web "$WEB" --socket "$SOCK" >> "$VARDIR/autoproxy.log" 2>&1
+  fi
+}
+
+start() {
+  mkdir -p "$VARDIR"
+  [ -f "$CONFIG" ] || printf '{"watch_dirs":[],"codec":"dnxhr_lb","resolution":"1080p","port":9080,"hwaccel":"auto"}\n' > "$CONFIG"
+  rm -f "$STOP_FLAG"
+  if is_running; then exit 0; fi
+  # 启动值守循环：主程序退出后自动重启（除非收到停止标志）
+  # 注意：子进程 stdout/stderr 必须重定向，否则会持有父进程的管道导致调用方阻塞
+  (
+    while [ ! -f "$STOP_FLAG" ]; do
+      launch_app &
+      APP_PID=$!
+      wait "$APP_PID" 2>/dev/null
+      [ -f "$STOP_FLAG" ] && break
+      echo "[watchdog] $(date '+%Y-%m-%d %H:%M:%S') 主程序退出，3 秒后自动重启" >> "$VARDIR/autoproxy.log"
+      sleep 3
+    done
+  ) > /dev/null 2>&1 &
+  echo $! > "$WATCHDOG_PIDFILE"
+  exit 0
+}
+
+stop() {
+  touch "$STOP_FLAG"
+  if [ -f "$WATCHDOG_PIDFILE" ]; then
+    kill "$(cat "$WATCHDOG_PIDFILE")" 2>/dev/null
+    rm -f "$WATCHDOG_PIDFILE"
+  fi
+  pkill -f "$PATTERN" 2>/dev/null
+  # 杀掉所有值守循环（含可能残留的旧 watchdog），[c] 避免匹配自身
+  pkill -f "[c]md/main start" 2>/dev/null
+  rm -f "$STOP_FLAG"
+  exit 0
+}
+
+status() {
+  if is_running; then exit 0; else exit 3; fi
+}
+
+case "$1" in
+  start) start ;;
+  stop) stop ;;
+  status) status ;;
+  *) exit 1 ;;
+esac

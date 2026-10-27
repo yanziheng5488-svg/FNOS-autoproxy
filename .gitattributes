@@ -1,0 +1,8 @@
+# 统一换行符：脚本/源码一律 LF（CRLF 会导致 fnOS 上 sh 脚本报错）
+* text=auto eol=lf
+
+# 可执行/二进制文件不做文本转换
+*.png binary
+*.PNG binary
+*.exe binary
+*.fpk binary

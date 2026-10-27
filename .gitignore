@@ -1,0 +1,23 @@
+# 构建产物（由 fnpack build 生成，不入库）
+*.fpk
+
+# 打包工具二进制（本地工具，跨平台不可复用）
+tools/fnpack.exe
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# 编辑器 / 系统
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# 运行时数据与日志
+*.log
+*.db
+autoproxy.sock
